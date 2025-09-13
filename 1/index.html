@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project 1 — Prokudin-Gorskii Colorization</title>
+  <link rel="stylesheet" href="../style.css"/>
+  <style>
+    /* Base gallery (single-scale) — slightly larger than your original */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      justify-items: center;
+    }
+    /* Make ONLY the pyramid gallery tiles bigger */
+    #pyramid-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); /* bigger tiles */
+      gap: 20px;
+      justify-items: center;
+    }
+    @media (max-width: 900px) {
+      #pyramid-gallery {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); /* keep mobile friendly */
+      }
+    }
+
+    figure { margin: 0; text-align: center; }
+    figure img { max-width: 100%; height: auto; display: block; border-radius: 6px; }
+    header a { text-decoration: none; }
+    .section-note { font-size: 0.95rem; opacity: 0.85; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="../index.html">← Back to Portfolio</a>
+    <h1>Project 1 — Colorizing Prokudin-Gorskii</h1>
+  </header>
+
+  <main>
+    <!-- 1) Background -->
+    <section id="background">
+      <h2>Background</h2>
+      <p>
+        Sergei Mikhailovich Prokudin-Gorskii was a Russian man who recorded many images with 3 exposures using red, green, and blue filters. By stitching these together, we can get the color versions.
+      </p>
+    </section>
+
+    <!-- 2) Single-scale approach -->
+    <section id="single-scale">
+      <h2>Single-Scale Alignment (NCC)</h2>
+      <p class="section-note">
+        We can't just stack the images on top of each other due to slight differences in alignment. To fix this, we must programmatically find the best alignment by searching over a window of displacements, and computing how well the images stack together. From initial tests, I found the NCC score metric worked slightly better than the Euclidean score metric. We then use these displacements to align all 3 channels and get our final colored image. Some initial difficulties here were getting used to syntax and transformations. Some specifics are that I crop off around 10% of the image from each side to get rid of the borders and because some aspects of the photo get worse the farther from center you go. I search over a window of (-15, 15) in both the x and y directions.
+      </p>
+
+      <!-- Placeholders for the three single-scale results (edit file names if yours differ) -->
+      <div class="gallery" id="single-gallery" data-img-dir="media/">
+        <figure data-name="cathedral.jpg">
+          <img alt="cathedral result"/>
+          <figcaption>cathedral — loading…</figcaption>
+        </figure>
+        <figure data-name="monastery.jpg">
+          <img alt="monastery result"/>
+          <figcaption>monastery — loading…</figcaption>
+        </figure>
+        <figure data-name="tobolsk.jpg">
+          <img alt="tobolsk result"/>
+          <figcaption>tobolsk — loading…</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- 3) Pyramid approach -->
+    <section id="pyramid">
+      <h2>Multi-Scale Pyramid Alignment</h2>
+      <p class="section-note">
+        The initial naive approach will be very expensive for larger .tif files, and so an image pyramid is needed. Essentially, this means I downscale my image by factors of 0.5 to be able to do a less expensive initial search over less windows, and then use that result to guide a more refined search on the next scale up. The logic inside each search is the exact same as above. I used 4 levels of the pyramid. This resulted in success for most of the images but Emir.tif still had slight blurring issues, due to aspects of the photo. Other difficulties were getting used to the logic of the pyramid itself, and finetuning some of the specific values I used for window searching.
+      </p>
+
+      <!-- All remaining images will be generated from results.csv -->
+      <div class="gallery" id="pyramid-gallery" data-img-dir="media/">
+        <!-- JS will populate figures here based on results.csv -->
+      </div>
+    </section>
+    <section id="personal-results">
+        <h2>Additional Results</h2>
+        <p class="section-note">Extra images from the Library of Congress.</p>
+        <div class="gallery" id="personal-gallery" data-img-dir="media/">
+        </div>
+      </section>
+      
+  </main>
+
+  <script>
+    // --- tiny CSV parser that handles quotes ---
+    function parseCSV(text) {
+      const rows = [];
+      let i = 0, field = '', row = [], inQ = false;
+      while (i < text.length) {
+        const c = text[i];
+        if (c === '"') {
+          if (inQ && text[i+1] === '"') { field += '"'; i += 2; continue; } // escaped quote
+          inQ = !inQ; i++; continue;
+        }
+        if (c === ',' && !inQ) { row.push(field); field = ''; i++; continue; }
+        if ((c === '\n' || c === '\r') && !inQ) {
+          if (field.length || row.length) { row.push(field); rows.push(row); }
+          field = ''; row = [];
+          if (c === '\r' && text[i+1] === '\n') i += 2; else i++;
+          continue;
+        }
+        field += c; i++;
+      }
+      if (field.length || row.length) { row.push(field); rows.push(row); }
+      const header = rows.shift().map(s => s.trim());
+      return rows.filter(r => r.length === header.length).map(r => {
+        const obj = {}; header.forEach((h, idx) => obj[h] = r[idx]); return obj;
+      });
+    }
+
+    // Map an input name (e.g., "emir.tif") to output jpg ("emir.jpg"), per your script.
+    function outputFileFromName(name) {
+      return name.replace(/\.[^.]+$/, '.jpg');
+    }
+
+    // Truncate/format time a bit
+    function fmtTime(t) {
+      const n = Number(String(t).trim().replace(/s$/i, ''));
+      if (Number.isFinite(n)) return n.toFixed(2); // show 2 decimals
+      return String(t || '');
+    }
+
+    // Fill a <figure data-name=""> using a CSV row
+    function fillFigure(fig, row, imgDir) {
+      const out = outputFileFromName(row.name || row.image || '');
+      const img = fig.querySelector('img');
+      img.loading = 'lazy';
+      img.src = imgDir + out;
+      img.alt = (row.name || out) + ' result';
+      const cap = fig.querySelector('figcaption');
+      cap.textContent = `${out} — G shift: ${row.g_shift}, R shift: ${row.r_shift}, time: ${fmtTime(row.time)} s`;
+    }
+
+    async function main() {
+      // Adjust path if your CSV lives elsewhere (this assumes proj1/results.csv next to this HTML)
+      const resp = await fetch('results.csv');
+      const text = await resp.text();
+      const data = parseCSV(text);
+
+      // Which three count as "single-scale"? Edit if your filenames differ.
+      const singleSet = new Set(['cathedral.jpg','monastery.jpg','tobolsk.jpg']);
+
+      // Fill the three placeholders if present in CSV
+      const singleGallery = document.getElementById('single-gallery');
+      const singleDir = singleGallery?.dataset.imgDir || 'media/';
+      if (singleGallery) {
+        [...singleGallery.querySelectorAll('figure')].forEach(fig => {
+          const name = fig.dataset.name;
+          const row = data.find(r => (r.name || '').toLowerCase() === name.toLowerCase());
+          if (row) fillFigure(fig, row, singleDir);
+          else {
+            // still set the expected output filename even if CSV row missing
+            const out = outputFileFromName(name);
+            const img = fig.querySelector('img');
+            img.loading = 'lazy';
+            img.src = singleDir + out;
+            fig.querySelector('figcaption').textContent = `${out} — awaiting CSV entry`;
+          }
+        });
+      }
+
+      // Build the pyramid gallery from all CSV rows EXCEPT the single-scale trio
+      const pyramidGallery = document.getElementById('pyramid-gallery');
+      const pyramidDir = pyramidGallery?.dataset.imgDir || 'media/';
+      if (pyramidGallery) {
+        const remaining = data.filter(r => !singleSet.has((r.name || '').toLowerCase()));
+        remaining.forEach(r => {
+          const fig = document.createElement('figure');
+          const img = document.createElement('img');
+          const cap = document.createElement('figcaption');
+          fig.appendChild(img); fig.appendChild(cap);
+          pyramidGallery.appendChild(fig);
+          fillFigure(fig, r, pyramidDir);
+        });
+      }
+    }
+
+    main().catch(err => console.error(err));
+  </script>
+
+<script>
+    (async function loadPersonal() {
+      const personal = document.getElementById('personal-gallery');
+      if (!personal) return;
+    
+      try {
+        const resp = await fetch('results2.csv');
+        if (!resp.ok) return; // quietly skip if not present
+        const text = await resp.text();
+        const rows = parseCSV(text);
+        const dir = personal.dataset.imgDir || 'media/';
+    
+        rows.forEach(r => {
+          const fig = document.createElement('figure');
+          const img = document.createElement('img');
+          const cap = document.createElement('figcaption');
+          fig.appendChild(img); fig.appendChild(cap);
+          personal.appendChild(fig);
+          fillFigure(fig, r, dir);
+        });
+      } catch (e) { console.error(e); }
+    })();
+    </script>
+    
+
+  <!-- Improved result using Sobel edges -->
+  <section id="emir2">
+    <h2>Improved Alignment (Sobel Edges)</h2>
+    <p class="section-note">
+      Fixed <code>emir2.jpg</code> using Sobel edge detector before NCC to stabilize the match across channels.
+    </p>
+    <figure style="max-width:450px; margin: 0 auto; text-align:center;">
+      <img src="media/emir2.jpg" alt="emir2 — Sobel-improved result" style="width:100%; height:auto; border-radius:6px;">
+      <figcaption style="margin-top:8px;">
+      </figcaption>
+    </figure>
+  </section>
+  
+</body>
+</html>
