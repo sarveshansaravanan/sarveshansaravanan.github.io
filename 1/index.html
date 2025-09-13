@@ -43,7 +43,7 @@
     <section id="background">
       <h2>Background</h2>
       <p>
-        Sergei Mikhailovich Prokudin-Gorskii was a Russian man who recorded many images with 3 exposures using red, green, and blue filters. By stitching these together, we can get the color versions.
+        Sergei Mikhailovich Prokudin-Gorskii was a Russian man who (starting from 1907) recorded many images with 3 exposures using red, green, and blue filters. By stitching these together, we can get the color versions.
       </p>
     </section>
 
@@ -51,7 +51,7 @@
     <section id="single-scale">
       <h2>Single-Scale Alignment (NCC)</h2>
       <p class="section-note">
-        We can't just stack the images on top of each other due to slight differences in alignment. To fix this, we must programmatically find the best alignment by searching over a window of displacements, and computing how well the images stack together. From initial tests, I found the NCC score metric worked slightly better than the Euclidean score metric. We then use these displacements to align all 3 channels and get our final colored image. Some initial difficulties here were getting used to syntax and transformations. Some specifics are that I crop off around 10% of the image from each side to get rid of the borders and because some aspects of the photo get worse the farther from center you go. I search over a window of (-15, 15) in both the x and y directions.
+        We can't just stack the images on top of each other due to slight differences in alignment. To fix this, we must programmatically find the best alignment by searching over a window of displacements, and computing how well the images stack together. From initial tests, I found the NCC score metric worked slightly better than the Euclidean score metric. We then use these displacements to align all 3 channels and get our final colored image. Some initial difficulties here were getting used to numpy syntax and transformations. One thing I do is that I crop off around 10% of the image from each side to get rid of the borders and because some aspects of the photo get worse the farther from center you go. This cropping improved the final result. I search over a window of (-15, 15) in both the x and y directions.
       </p>
 
       <!-- Placeholders for the three single-scale results (edit file names if yours differ) -->
