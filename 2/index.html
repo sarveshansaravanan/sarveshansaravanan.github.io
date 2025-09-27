@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project 2 — Fun with Filters and Frequencies</title>
+  <link rel="stylesheet" href="../style.css"/>
+  <style>
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      justify-items: center;
+    }
+    figure { margin: 0; text-align: center; }
+    figure img { max-width: 100%; height: auto; display: block; border-radius: 6px; }
+    header a { text-decoration: none; }
+    .section-note { font-size: 0.95rem; opacity: 0.85; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="../index.html">← Back to Portfolio</a>
+    <h1>Project 2 — Fun with Filters and Frequencies</h1>
+  </header>
+
+  <main>
+    <!-- Part 1 -->
+    <section id="part1">
+      <h2>Part 1: Fun with Filters</h2>
+
+      <section id="part1-1">
+        <h3>1.1 Convolutions from Scratch</h3>
+        <p class="section-note">Implemented convolution with 4 loops, then optimized to 2 loops. Compared against <code>scipy.signal.convolve2d</code>, this is likely less optimized for parallel computation. Also, this only supports a 'same' mode, compared to 'same', 'full', etc. Below is a code snippet
+            showing both the loops. The 4 loop version iterates over each pixel (with the h and w loops) and each kernel entry (kernelH and kernelW loops) 
+            This makes the runtime inefficient, being O(H * W * k^2), k being the kernel size.
+        The two loop version improves runtime efficiency by slicing a region and doing vector operations instead of manually going through and computing each part of the convolution. This replaces the inner for loop from above.
+        Boundaries are handled using np.pad to simulate the "same" mode. Essentially, this keeps the output size the same as the input with zeros as padding.</p>
+        <pre><code class="language-python">
+            def four_loop_convolution(image, kernel):
+                imageHeight, imageWidth = image.shape
+                kernelHeight, kernelWidth = kernel.shape
+                heightPad, widthPad = kernelHeight // 2, kernelWidth // 2
+            
+                paddedImg = np.pad(image, pad_width=((heightPad, heightPad), (widthPad, widthPad)),
+                                   mode='constant', constant_values=0)
+                flipped = kernel[::-1, ::-1]
+                rv = np.zeros((imageHeight, imageWidth))
+            
+                for i in range(imageHeight):
+                    for j in range(imageWidth):
+                        con_sum = 0
+                        for x in range(kernelHeight):
+                            for y in range(kernelWidth):
+                                con_sum += paddedImg[i + x, j + y] * flipped[x, y]
+                        rv[i, j] = con_sum
+            
+                return rv
+            
+            def two_loop_convolution(image, kernel):
+                imageHeight, imageWidth = image.shape
+                kernelHeight, kernelWidth = kernel.shape
+                heightPad, widthPad = kernelHeight // 2, kernelWidth // 2
+            
+                paddedImg = np.pad(image, pad_width=((heightPad, heightPad), (widthPad, widthPad)),
+                                   mode='constant', constant_values=0)
+                flipped = kernel[::-1, ::-1]
+                rv = np.zeros((imageHeight, imageWidth))
+            
+                for i in range(imageHeight):
+                    for j in range(imageWidth):
+                        boxRegion = paddedImg[i:i + kernelHeight, j:j + kernelWidth]
+                        rv[i, j] = np.sum(boxRegion * flipped)
+            
+                return rv
+              </code></pre>
+        <div class="gallery">
+          <figure><img src="media/1-19x9boxfilter.png" alt="9x9 box filter result"><figcaption>9×9 Box Filtered Image</figcaption></figure>
+          <figure><img src="media/1-1D_x.png" alt="finite difference dx"><figcaption>Finite Difference Dx</figcaption></figure>
+          <figure><img src="media/1-1D_y.png" alt="finite difference dy"><figcaption>Finite Difference Dy</figcaption></figure>
+        </div>
+      </section>
+
+      <section id="part1-2">
+        <h3>1.2 Finite Difference Operator</h3>
+        <p class="section-note">Applied <code>D<sub>x</sub></code> and <code>D<sub>y</sub></code> operators to the Cameraman image, then combined into gradient magnitude and binarized edge images. 
+        I set the threshold to 0.305 through qualititative testing. Tradeoffs were that if the threshold was too high, we would lose the actual edges of the cameraman, whereas if it was too low, this 
+    would allow too much noise. threshold = 0.305 worked well to balance these factors.</p>
+        <div class="gallery">
+        <figure><img src="media/1-2D_x.png" alt="finite difference dx"><figcaption>Finite Difference Dx</figcaption></figure>
+          <figure><img src="media/1-2D_y.png" alt="finite difference dy"><figcaption>Finite Difference Dy</figcaption></figure>
+        </div>
+        <div class="gallery">
+              <figure><img src="media/1-2gradmag.png" alt="gradient magnitude"><figcaption>Gradient Magnitude</figcaption></figure>
+              <figure><img src="media/1-2binarygradmag.png" alt="binary edge image"><figcaption>Binarized Edge Image</figcaption></figure>
+            </div>
+      </section>
+
+      <section id="part1-3">
+        <h3>1.3 Derivative of Gaussian (DoG) Filter</h3>
+        <p class="section-note">Used <code>cv2.getGaussianKernel</code> to build Gaussian filters. With the Derivative of Gaussian (DoG), the Gaussian blur smooths the image before differencing, which suppresses high-frequency noise. 
+        This then reduced background noise and made edges appear cleaner when applying the D_x and D_y operator. I clearly see less noise in this version. Again, the threshold was qualitatively chosen, this time being 0.23.</p>
+        <div class="gallery">
+          <figure><img src="media/1-3gradmag.png" alt="gaussian blurred"><figcaption>Gaussian Blur</figcaption></figure>
+          <figure><img src="media/1-3dogfilter.png" alt="dog filter"><figcaption>Derivative of Gaussian</figcaption></figure>
+        </div>
+      </section>
+
+    <!-- Part 2 -->
+    <section id="part2">
+      <h2>Part 2: Fun with Frequencies</h2>
+
+      <section id="part2-1">
+        <h3>2.1 Image Sharpening</h3>
+        <p class="section-note">Implemented unsharp masking through a technique that initially extracts high frequences by subtracting the blurred image from the original. Only the finer details will be left. Then, these high frequences can be amplified by multiplying by some factor, then added to the original image to give a sense of sharpening. Tested on Taj Mahal and additional images.
+            Increasing <code>α</code> boosts the contribution of the high-frequency component (as seen with taj mahal sharpened with alpha = 2 vs 4). Generally, an α above 2 made the image look unnatural and too sharp, so I kept it at 2.
+            Looking at the images, the difference is clear in how much more exaggerated the edges look in the sharpened versions. For the lebron image, the people in the background also become more defined.
+        </p>
+        <div class="gallery">
+            <figure><img src="media/2-1tajnormal.png"><figcaption>Normal</figcaption></figure>
+          <figure><img src="media/2-1blurredtaj.png"><figcaption>Blurred</figcaption></figure>
+          <figure><img src="media/2-1highfreqtaj.png"><figcaption>High Frequencies</figcaption></figure>
+          <figure><img src="media/2-1tajsharp.png"><figcaption>Sharpened Result (alpha=2)</figcaption></figure>
+          <figure><img src="media/2-1tajsharpest.png"><figcaption>Sharpened Result (alpha=4)</figcaption></figure>
+        </div>
+        <div class="gallery">
+            <figure><img src="media/2-1lebronnormal.png"><figcaption>Normal</figcaption></figure>
+          <figure><img src="media/2-1blurredlebron.png"><figcaption>Blurred</figcaption></figure>
+          <figure><img src="media/2-1highfreqlebron.png"><figcaption>High Frequencies</figcaption></figure>
+          <figure><img src="media/2-1lebronsharp.png"><figcaption>Sharpened Result</figcaption></figure>
+        </div>
+      </section>
+
+      <section id="part2-2">
+        <h3>2.2 Hybrid Images</h3>
+        <p class="section-note">Created hybrid images by combining low frequencies of one image and high frequencies of another. Experimented with cutoff frequencies qualitatively. Generally I used a high pass sigma of 2 or 3 and a low pass sigma from 5-7</p>
+        <div class="gallery">
+          <figure><img src="media/2-2dereknormal.jpg"><figcaption>Derek normal</figcaption></figure>
+          <figure><img src="media/2-2nutmegnormal.jpg"><figcaption>Nutmeg normal</figcaption></figure>
+          <figure><img src="media/2-2dereknutmeg.png"><figcaption>Hybrid</figcaption></figure>
+        </div>
+        <div class="gallery">
+            <figure><img src="media/2-2lucarionormal.png"><figcaption>Lucario normal</figcaption></figure>
+            <figure><img src="media/2-2optimusnormal.png"><figcaption>Optimus Prime normal</figcaption></figure>
+            <figure><img src="media/2-2optimuslucario.png"><figcaption>Hybrid</figcaption></figure>
+          </div>
+          <div class="gallery">
+            <figure><img src="media/2-2batmannormal.jpg"><figcaption>Batman normal</figcaption></figure>
+            <figure><img src="media/2-2dognormal.jpg"><figcaption>German Shephard normal</figcaption></figure>
+            <figure><img src="media/2-2dogbatman.png"><figcaption>Hybrid</figcaption></figure>
+          </div>
+        <h4>Process/Frequency Analysis (Batman + Dog)</h4>
+        <div class="gallery">
+            <figure><img src="media/2-2batmanalign.png"><figcaption>Batman aligned</figcaption></figure>
+          <figure><img src="media/2-2dogalign.png"><figcaption>Dog aligned</figcaption></figure>
+          <figure><img src="media/2-2lowpassfft.png"><figcaption>Low-Pass Fourier</figcaption></figure>
+          <figure><img src="media/2-2highpassfft.png"><figcaption>High-Pass Fourier</figcaption></figure>
+          <figure><img src="media/2-2hybridfft.png"><figcaption>Hybrid Fourier</figcaption></figure>
+        </div>
+      </section>
+
+      <section id="part2-3">
+        <h3>2.3/4 Gaussian and Laplacian Stacks and Multiresolution Blending</h3>
+
+      <!-- Gaussian Stacks -->
+  <h4>Gaussian Stacks</h4>
+  <div class="gallery">
+    <figure><img src="media/2-4applegstack.png"><figcaption>Apple Gaussian Stack</figcaption></figure>
+    <figure><img src="media/2-4orangegstack.png"><figcaption>Orange Gaussian Stack</figcaption></figure>
+  </div>
+
+  <!-- Laplacian Stacks -->
+  <h4>Laplacian Stacks</h4>
+  <div class="gallery">
+    <figure><img src="media/2-4applelstack.png"><figcaption>Apple Laplacian Stack</figcaption></figure>
+    <figure><img src="media/2-4oragnelstack.png"><figcaption>Orange Laplacian Stack</figcaption></figure>
+  </div>
+
+  <h4>Recreated 3.42</h4>
+
+    <figure><img src="media/2-4L0.png"><figcaption>Laplacian Level 0 (High Frequencies)</figcaption></figure>
+    <figure><img src="media/2-4L2.png"><figcaption>Laplacian Level 2 (Mid Frequencies)</figcaption></figure>
+    <figure><img src="media/2-4L4.png"><figcaption>Laplacian Level 4 (Low Frequencies)</figcaption></figure>
+
+
+  <!-- Residuals -->
+  <h4>Residuals</h4>
+  <div class="gallery">
+    <figure><img src="media/2-4Residual.png"><figcaption>Residuals (Apple / Orange / Blended)</figcaption></figure>
+  </div>
+
+  <!-- Final Oraple -->
+  <h4>Final Blend</h4>
+  <div class="gallery">
+    <figure><img src="media/2-4oraple.png"><figcaption>Final Oraple</figcaption></figure>
+  </div>
+
+  
+
+  <!-- Custom Blends -->
+  <h4>Lambo Blends</h4>
+  <div class="gallery">
+    <figure><img src="media/lambo1.jpg"><figcaption>Lambo original 1</figcaption></figure>
+    <figure><img src="media/lambo2.jpg"><figcaption>Lambo original 2</figcaption></figure>
+    <figure><img src="media/2-4lambo12.png"><figcaption>Hyrbid</figcaption></figure>
+</div>
+
+  <!-- Extra Hybrid Gallery -->
+  <h4>Irregular Mask Hybrids</h4>
+  <div class="gallery">
+    <figure><img src="media/realball.jpg"><figcaption>Ball</figcaption></figure>
+    <figure><img src="media/realorange1.jpg"><figcaption>Orange</figcaption></figure>
+    <figure><img src="media/ballorange.png"><figcaption>Hybrid (irregular circle mask)</figcaption></figure>
+  
+</div>
+  
+</section>
+    </section>
+
+  </main>
+</body>
+</html>
