@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project 3 — Image Warping and Mosaicing</title>
+  <link rel="stylesheet" href="../style.css"/>
+  <style>
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      justify-items: center;
+    }
+    figure { margin: 0; text-align: center; }
+    figure img { max-width: 100%; height: auto; display: block; border-radius: 6px; }
+    header a { text-decoration: none; }
+    .section-note { font-size: 0.95rem; opacity: 0.85; }
+    pre { background: #f6f8fa; padding: 10px; border-radius: 6px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="../index.html">← Back to Portfolio</a>
+    <h1>Project 3 — Image Warping and Mosaicing</h1>
+  </header>
+
+  <main>
+    <!-- A.1 Shoot and Digitize Pictures -->
+    <section id="part1">
+      <h2>A.1: Shoot and Digitize Pictures</h2>
+      <p class="section-note">
+        I captured multiple overlapping photos with a fixed camera center while rotating the camera horizontally to create projective transformations between frames. 
+        I ensured roughly 50% overlap between images to make homography estimation stable. Straight lines (like walls and tables) were used to verify minimal distortion.
+        Good lighting and static scenes were chosen to prevent ghosting in the final mosaic.
+      </p>
+      <h4>Input Photos</h4>
+      <div class="gallery">
+        <figure><img src="media/livingleft.png" alt="Photo 1"><figcaption>Photo 1</figcaption></figure>
+        <figure><img src="media/livingright.png" alt="Photo 2"><figcaption>Photo 2</figcaption></figure>
+      </div>
+      <div class="gallery">
+        <figure><img src="media/aptup.png" alt="Photo 1"><figcaption>Photo 1</figcaption></figure>
+        <figure><img src="media/aptdown.png" alt="Photo 2"><figcaption>Photo 2</figcaption></figure>
+      </div>
+      <p class="section-note">These images were taken by fixing the camera at a single point and rotating slightly between shots.</p>
+    </section>
+
+    <!-- A.2 Recover Homographies -->
+    <section id="part2">
+      <h2>A.2: Recover Homographies</h2>
+      <p class="section-note">
+        To align images, I implemented <code>computeH(im1_pts, im2_pts)</code> to solve for the 3×3 homography matrix H using corresponding points between two images.
+        Each correspondence (x, y) ↔ (x', y') generates two linear equations. Stacking all equations leads to an overdetermined system <code>Ah = b</code> solved using least squares.
+        This gives 8 unknowns (since H has 9 parameters, but one is fixed to 1). Increasing the number of correspondences improves robustness against noise.
+      </p>
+
+
+
+      <h4>Example Correspondences</h4>
+      <div class="gallery">
+        <figure><img src="media/correspondences.png" alt="Correspondences"><figcaption>Selected Correspondences</figcaption></figure>
+      </div>
+      <div class="gallery">
+        <figure><img src="media/visualized.png" alt="Correspondences"><figcaption>Selected Correspondences</figcaption></figure>
+      </div>
+
+      <h4>Recovered Homography Matrix</h4>
+      <pre><code>
+H =
+[[    1.3283    -0.0543 -2744.5793]
+ [    0.0651     1.0577     5.8011]
+ [    0.0001    -0.0001     1.    ]]
+      </code></pre>
+      
+      <p class="section-note">The homography successfully maps points from the first image into alignment with the second.</p>
+      <h4>System of Equations</h4>
+      <pre><code>
+      [x  y  1  0  0  0  -x*x'  -y*x'] [h1]   [x']
+      [0  0  0  x  y  1  -x*y'  -y*y'] [h2] = [y']
+                                         ...
+      </code></pre>
+      <p class="section-note">
+      Stacking all correspondences yields the linear system <code>A h = b</code>,
+      which we solve using least squares (<code>np.linalg.lstsq</code>).
+      </p>
+      
+    
+    </section>
+
+    <!-- A.3 Warp the Images -->
+    <section id="part3">
+      <h2>A.3: Warp the Images</h2>
+      <p class="section-note">
+        Using the computed homography, I implemented both nearest-neighbor and bilinear interpolation warping methods.
+        I used inverse warping to avoid holes in the resulting image. Bilinear interpolation provided smoother, more visually accurate results, while nearest neighbor was faster but rougher. <h4>Interpolation Trade-offs</h4>
+        <p class="section-note">
+        Across all images, bilinear interpolation took roughly 2–3× longer than nearest neighbor 
+        (e.g., 1.18 s vs 2.54 s for the cheese packet, 0.30 s vs 0.81 s for the door). 
+        Nearest neighbor is much faster since it simply rounds to the closest pixel, but the results look blocky and can lose fine detai
+        
+      </p>
+
+
+      <p class="section-note">
+        <strong>Overall Tradeoff:</strong> Nearest neighbor is computationally cheaper but yields jagged boundaries. Bilinear interpolation offers smoother transitions but requires more computation. I used NN because it was faster and yielded visually similar results.
+      </p>
+
+      <h3>Rectification Results</h3>
+      <p class="section-note">Rectified objects such as posters or tiles to be perfectly rectangular.</p>
+      <div class="gallery">
+        <figure><img src="media/cheese5.png" alt="Rectified Image 1"><figcaption>Original Example 1</figcaption></figure>
+        <figure><img src="media/door.png" alt="Rectified Image 2"><figcaption>Original Example 2</figcaption></figure>
+      </div>
+      <div class="gallery">
+        <figure><img src="media/rectifiedcheese.png" alt="Rectified Image 1"><figcaption>Rectified Example 1</figcaption></figure>
+        <figure><img src="media/rectifieddoor.png" alt="Rectified Image 2"><figcaption>Rectified Example 2</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- A.4 Blend Images into Mosaic -->
+    <section id="part4">
+      <h2>A.4: Blend the Images into a Mosaic</h2>
+      <p class="section-note">
+        I warped all images into a shared coordinate frame based on one reference image. 
+      </p>
+
+      <h4>Source Images</h4>
+      <div class="gallery">
+        <figure><img src="media/aptup.png" alt="Source 1"><figcaption>Source 1</figcaption></figure>
+        <figure><img src="media/aptdown.png" alt="Source 2"><figcaption>Source 2</figcaption></figure>
+      </div>
+      <div class="gallery">
+        <figure><img src="media/halleft.png" alt="Source 1"><figcaption>Source 1</figcaption></figure>
+        <figure><img src="media/hallright.png" alt="Source 2"><figcaption>Source 2</figcaption></figure>
+      </div>
+      <div class="gallery">
+        <figure><img src="media/livingleft.png" alt="Source 1"><figcaption>Source 1</figcaption></figure>
+        <figure><img src="media/livingright.png" alt="Source 2"><figcaption>Source 2</figcaption></figure>
+      </div>
+
+      <h4>Final Mosaics</h4>
+      <div class="gallery">
+        <figure><img src="media/aptup_aptup_blend.png" alt="Mosaic 1"><figcaption>Mosaic 1</figcaption></figure>
+        </div> 
+        <div class="gallery">
+        <figure><img src="media/livingleft_livingleft_blend.png" alt="Mosaic 2"><figcaption>Mosaic 2</figcaption></figure>
+    </div>
+        <div class="gallery">
+        <figure><img src="media/halleft_halleft_blend.png" alt="Mosaic 3"><figcaption>Mosaic 3</figcaption></figure>
+      
+    </section>
+
+
+
+  </main>
+</body>
+</html>

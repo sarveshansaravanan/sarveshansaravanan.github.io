@@ -80,3 +80,22 @@ body {
     margin-top: 4px;
   }
   
+  /* Code block styling */
+pre code {
+  display: block;
+  background-color: #1e1e1e;  /* dark background */
+  color: #d4d4d4;             /* light text */
+  padding: 12px;
+  border-radius: 8px;
+  font-family: "Fira Code", "Consolas", monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Optional syntax colors */
+.language-python .kw { color: #569CD6; }
+.language-python .str { color: #CE9178; }
+.language-python .num { color: #B5CEA8; }
+.language-python .cm  { color: #6A9955; }
