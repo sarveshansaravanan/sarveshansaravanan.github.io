@@ -92,8 +92,8 @@ H =
     <section id="part3">
       <h2>A.3: Warp the Images</h2>
       <p class="section-note">
-        Using the computed homography, I implemented both nearest-neighbor and bilinear interpolation warping methods.
-        I used inverse warping to avoid holes in the resulting image. Bilinear interpolation provided smoother, more visually accurate results, while nearest neighbor was faster but rougher. <h4>Interpolation Trade-offs</h4>
+        Using the computed homography, I implemented both nearest-neighbor and bilinear interpolation warping methods (inverse warping).
+        Bilinear interpolation provided smoother, more visually accurate results, while nearest neighbor was faster but rougher. <h4>Interpolation Trade-offs</h4>
         <p class="section-note">
         Across all images, bilinear interpolation took roughly 2–3× longer than nearest neighbor 
         (e.g., 1.18 s vs 2.54 s for the cheese packet, 0.30 s vs 0.81 s for the door). 
@@ -103,11 +103,11 @@ H =
 
 
       <p class="section-note">
-        <strong>Overall Tradeoff:</strong> Nearest neighbor is computationally cheaper but yields jagged boundaries. Bilinear interpolation offers smoother transitions but requires more computation. I used NN because it was faster and yielded visually similar results.
+        <strong>Overall Tradeoff:</strong> Nearest neighbor is computationally cheaper but yields somewhat less smooth results. Bilinear interpolation offers smoother transitions but requires more computation. I used NN because it was faster and you couldn't truly tell much of a difference.
       </p>
 
       <h3>Rectification Results</h3>
-      <p class="section-note">Rectified objects such as posters or tiles to be perfectly rectangular.</p>
+      <p class="section-note">It was easier to use rectangular objects, because we can just use one image, and hand-define a rectangular set of points to compute a homography for.</p>
       <div class="gallery">
         <figure><img src="media/cheese5.png" alt="Rectified Image 1"><figcaption>Original Example 1</figcaption></figure>
         <figure><img src="media/door.png" alt="Rectified Image 2"><figcaption>Original Example 2</figcaption></figure>
@@ -121,9 +121,7 @@ H =
     <!-- A.4 Blend Images into Mosaic -->
     <section id="part4">
       <h2>A.4: Blend the Images into a Mosaic</h2>
-      <p class="section-note">
-        I warped all images into a shared coordinate frame based on one reference image. 
-      </p>
+      <p class="section-note"> The procedure begins with some of the steps from before: choosing matching points and computing thehomography (I used NN for speed). Then, for the final mosaic, I first warped both images into the same coordinate frame using the recovered homography. At first, I simply averaged overlapping pixels, which caused visible seams and black edges. </p> <p class="section-note"> To fix this, I added an alpha mask that fades near image borders. This lets the overlap blend smoothly instead of cutting sharply. Overall, the alpha mask blending removes harsh edges and creates a cleaner mosaic. </p>
 
       <h4>Source Images</h4>
       <div class="gallery">
@@ -139,7 +137,7 @@ H =
         <figure><img src="media/livingright.png" alt="Source 2"><figcaption>Source 2</figcaption></figure>
       </div>
 
-      <h4>Final Mosaics</h4>
+      <h4>Final Mosaics, without proper blending</h4>
       <div class="gallery">
         <figure><img src="media/aptup_aptup_blend.png" alt="Mosaic 1"><figcaption>Mosaic 1</figcaption></figure>
         </div> 
@@ -148,6 +146,19 @@ H =
     </div>
         <div class="gallery">
         <figure><img src="media/halleft_halleft_blend.png" alt="Mosaic 3"><figcaption>Mosaic 3</figcaption></figure>
+        </div>
+        <h4>Final Mosaics after adding mask</h4>
+        <p class="section-note">
+          Mosaic results after adding masking so that there are no black regions.
+        </p>
+      <div class="gallery">
+        <figure><img src="media/aptup_aptup_blend.png" alt="Mosaic 1"><figcaption>Mosaic 1</figcaption></figure>
+        </div> 
+        <div class="gallery">
+        <figure><img src="media/livingleft_livingleft_blend_masked.png" alt="Mosaic 2"><figcaption>Mosaic 2</figcaption></figure>
+    </div>
+        <div class="gallery">
+        <figure><img src="media/halleft_halleft_blend_masked.png" alt="Mosaic 3"><figcaption>Mosaic 3</figcaption></figure>
       
     </section>
 
