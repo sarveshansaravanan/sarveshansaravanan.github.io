@@ -152,16 +152,140 @@ H =
           Mosaic results after adding masking so that there are no black regions.
         </p>
       <div class="gallery">
-        <figure><img src="media/aptup_aptup_blend.png" alt="Mosaic 1"><figcaption>Mosaic 1</figcaption></figure>
+        <figure id="apartment-mosaic"><img src="media/aptup_aptup_blend.png" alt="Mosaic 1"><figcaption>Mosaic 1</figcaption></figure>
         </div> 
         <div class="gallery">
-        <figure><img src="media/livingleft_livingleft_blend_masked.png" alt="Mosaic 2"><figcaption>Mosaic 2</figcaption></figure>
+        <figure id="livingroom-mosaic"><img src="media/livingleft_livingleft_blend_masked.png" alt="Mosaic 2"><figcaption>Mosaic 2</figcaption></figure>
     </div>
         <div class="gallery">
-        <figure><img src="media/halleft_halleft_blend_masked.png" alt="Mosaic 3"><figcaption>Mosaic 3</figcaption></figure>
+        <figure id="hallway-mosaic"><img src="media/halleft_halleft_blend_masked.png" alt="Mosaic 3"><figcaption>Mosaic 3</figcaption></figure>
       
     </section>
 
+        <!-- ========================== -->
+    <!-- B.1 Harris Corner Detection -->
+    <!-- ========================== -->
+    <section id="partB1">
+      <h2>B.1: Harris Corner Detection</h2>
+      <p class="section-note">
+        I started by detecting interest points using the Harris Corner Detector. The detector works by computing the corner strenght function: det(H)/trace(H), which 
+        essentially picks up on strong gradients in all directions, i.e. a corner.
+        The results are then refined with Adaptive Non-Maximal Suppression (ANMS) to not only keep the stronger corners, but also ones that are distributed over the whole image, instead of clustered in a few places.
+      </p>
+
+      <h4>Harris Corners (Before ANMS)</h4>
+      <div class="gallery">
+        <figure><img src="media2/aptup_corners.png" alt="Harris Corners"><figcaption>Detected Corners overlaid on the image</figcaption></figure>
+      </div>
+
+      <h4>Adaptive Non-Maximal Suppression (After ANMS)</h4>
+      <div class="gallery">
+        <figure><img src="media2/aptup_anms.png" alt="ANMS Corners"><figcaption>Chosen Corners after ANMS filtering</figcaption></figure>
+      </div>
+
+      <p class="section-note">
+        The ANMS-filtered corners are more uniformly distributed across the image, improving spatial coverage for feature matching and alignment.
+      </p>
+    </section>
+
+    <!-- ================================ -->
+    <!-- B.2 Feature Descriptor Extraction -->
+    <!-- ================================ -->
+    <section id="partB2">
+      <h2>B.2: Feature Descriptor Extraction</h2>
+      <p class="section-note">
+        Using the corners from ANMS, I extract 8×8 descriptors from a 40x40 window around each of the corners and normalize.
+      </p>
+
+      <h4>Example Feature Patches from the apartment top image</h4>
+      <div class="gallery">
+        <figure><img src="media2/feature_patch_1.png" alt="Feature Patch 1"><figcaption>Patch 1</figcaption></figure>
+        <figure><img src="media2/feature_patch_2.png" alt="Feature Patch 2"><figcaption>Patch 2</figcaption></figure>
+        <figure><img src="media2/feature_patch_3.png" alt="Feature Patch 3"><figcaption>Patch 3</figcaption></figure>
+        <figure><img src="media2/feature_patch_4.png" alt="Feature Patch 4"><figcaption>Patch 4</figcaption></figure>
+      </div>
+
+      <p class="section-note">
+        Each descriptor was sampled and normalized independently to achieve lighting invariance.
+      </p>
+    </section>
+
+    <!-- ======================= -->
+    <!-- B.3 Feature Matching -->
+    <!-- ======================= -->
+    <section id="partB3">
+      <h2>B.3: Feature Matching</h2>
+      <p class="section-note">
+        After extracting descriptors, I matched features between image pairs by comparing their Euclidean distances. I made use of the Lowe's ratio test.
+        This is essentially because we don't want to just choose the strongest matches, but also want to make sure that they're better than the next best match (thresholding this with a ratio). 
+        This helps filter out matches where it could go either way; those could lead to incorrect homographies.
+      </p>
+
+      <h4>Example Feature Descriptor Matches from the apartment top and bottom images, and actual computed point correspondences</h4>
+      <div class="gallery">
+        <figure><img src="media2/featurematch.png" alt="Feature match"></figure>
+      </div>
+      <div class="gallery">
+        <figure><img src="media2/pointsmatch.png" alt="Feature match"></figure>
+      </div>
+
+      <p class="section-note">
+        The resulting correspondences provided candidate pairs for computing robust homographies in the next step using RANSAC.
+      </p>
+    </section>
+
+    <!-- ======================= -->
+    <!-- B.4 RANSAC and Mosaics -->
+    <!-- ======================= -->
+    <section id="partB4">
+      <h2>B.4: RANSAC for Robust Homography</h2>
+      <p class="section-note">
+        I used 4-point RANSAC to compute the homography from the feature matches. RANSAC (random sample consensus) works how its names sounds: it randomly chooses a sample
+        of the correspondes (in this case 4-point) to compute a homography then checks how many corresponds "agree". The homography with the most that agree, "inliers", is then used for the final transformation.
+         There is an improvement with the blending for the shell gas station
+        mosaic compared to the manual one, so it seems the model was able to compute a better matching than my manual points.
+      </p>
+
+      <p class="section-note">
+        The three mosaics below link back to their manual mosaics from Part A for comparison.
+      </p>
+
+      <h4>Automatic Mosaics (RANSAC-Based)</h4>
+      <div class="gallery">
+        <figure><a href="#apartment-mosaic"><img src="media2/auto_mosaic_aptup_aptdown.png" alt="Auto Apartment Mosaic"></a><figcaption>Apartment Mosaic (click for manual version)</figcaption></figure>
+        <figure><a href="#livingroom-mosaic"><img src="media2/auto_mosaic_livingleft_livingright.png" alt="Auto Living Room Mosaic"></a><figcaption>Living Room Mosaic (click for manual version)</figcaption></figure>
+      </div>
+
+      <div class="gallery">
+        <figure><a href="#hallway-mosaic"><img src="media2/auto_mosaic_halleft_hallright.png" alt="Auto Hallway Mosaic"></a><figcaption>Hallway Mosaic (click for manual version)</figcaption></figure>
+             </div>
+
+      <h4>Manual vs Automatic Comparison</h4>
+      <div class="gallery">
+        <figure><img src="media2/shelleft.png" alt="Manual"><figcaption>Reference image left</figcaption></figure>
+        <figure><img src="media2/shelright.png" alt="Auto"><figcaption>Reference image right</figcaption></figure>
+      </div>
+      <div class="gallery">
+        <figure><img src="media2/shelleft_shelleft_manual.png" alt="Manual Shelf Mosaic"><figcaption>Manual Mosaic</figcaption></figure>
+      </div>
+      <div class="gallery">
+        <figure><img src="media2/auto_mosaic_shelleft_shelright.png" alt="Auto Shelf Mosaic"><figcaption>Automatic Mosaic (RANSAC)</figcaption></figure>
+      </div>
+
+      <h4>Additional Automatic Mosaic</h4>
+      <div class="gallery">
+        <figure><img src="media2/baclleft.png" alt="Manual"><figcaption>Reference image left</figcaption></figure>
+        <figure><img src="media2/baclright.png" alt="Auto"><figcaption>Reference image right</figcaption></figure>
+      </div>
+      <div class="gallery">
+        <figure><img src="media2/auto_mosaic_baclleft_baclright.png" alt="Auto Mosaic"><figcaption>Balcony view</figcaption></figure>
+      </div>
+
+      <p class="section-note">
+        Overall, I learned about how the Harris detector can look for corners by checking for differences in all directions, feature matching by looking for a match significantly better than the other candidates,
+      and RANSAC to maximize the amount of inliers for a homography.      </p>
+    </section>
+    
 
 
   </main>
