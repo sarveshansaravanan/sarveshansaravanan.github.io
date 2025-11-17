@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project 4 — Neural Radiance Fields</title>
+  <link rel="stylesheet" href="../style.css"/>
+  <style>
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      justify-items: center;
+    }
+    figure img { max-width: 100%; border-radius: 6px; }
+    pre { background: #1e1e1e; padding: 12px; border-radius: 6px; }
+    figcaption { color: #bbb; }
+  </style>
+</head>
+
+<body>
+<header>
+  <a href="../index.html">← Back to Portfolio</a>
+  <h1>Project 4 — Neural Radiance Fields</h1>
+</header>
+
+<main>
+
+<section>
+  <h2>Part 0 — Camera Calibration & Scanning</h2>
+
+  <h3>Example calibration shot and picture of object</h3>
+  <div class="gallery">
+    <figure><img src="media/IMG_4571.png"><figcaption>Camera Calibration</figcaption></figure>
+    <figure><img src="media/IMG_4578.png"><figcaption>Object</figcaption></figure>
+  </div>
+
+  <h3>Viser Camera Frustums (2 Screenshots)</h3>
+  <div class="gallery">
+    <figure><img src="media/pt0frustum.png"><figcaption>Screenshot 1</figcaption></figure>
+    <figure><img src="media/pt0frustum2.png"><figcaption>Screenshot 2</figcaption></figure>
+  </div>
+</section>
+
+<section id="part1">
+  <h2>Part 1 — Neural Field for a 2D Image</h2>
+
+  <h3>Model Architecture</h3>
+  <pre><code>
+MLP with sinusoidal positional encoding (PE)
+Layers: 5 fully connected layers
+Width: 256
+Activation: ReLU
+Final Activation: Sigmoid
+Learning Rate: 1e-2
+Batch Size: 10,000
+PE Frequency Levels Tested: {0, 10}
+  </code></pre>
+
+  <p>
+    For Part 1 I built a neural field that learns a direct mapping from pixel coordinates to RGB values. 
+    The network uses a 5 layer MLP with width 256 and ReLU activations, and a Sigmoid output so the predicted colors stay within a valid range. 
+    I trained using Adam with a learning rate of 1e-2 and sampled 10k random pixels per iteration. 
+    The input coordinates and colors were normalized to keep the optimization stable, and I applied sinusoidal positional encoding to the inputs with two frequency levels for the comparisons. 
+    Training relied on MSE loss. 
+  </p>
+
+  <h2>Fox Image</h2>
+
+  <h3>Training Progression (Iterations 0 → 1999)</h3>
+  <figure>
+    <img src="media/pt1progfox.png" />
+  </figure>
+
+  <h3>Original vs Reconstructed</h3>
+  <figure>
+    <img src="media/foxogvsreconstruct.png" />
+  </figure>
+
+  <h3>PSNR Curve</h3>
+  <figure>
+    <img src="media/pt1foxpsnr.png" />
+  </figure>
+
+  <h2>Coke Image</h2>
+
+  <h3>Training Progression (Iterations 0 → 1999)</h3>
+  <figure>
+    <img src="media/cokeprogpt1.png" />
+  </figure>
+
+  <h3>Original vs Reconstructed</h3>
+  <figure>
+    <img src="media/originalvsreconstructedpt1coke.png" />
+  </figure>
+
+  <h3>PSNR Curve</h3>
+  <figure>
+    <img src="media/pt1cokepsnr.png" />
+  </figure>
+
+  <h3>Frequency/Width Comparisons</h3>
+  <figure>
+    <img src="media/pt12x2.png" />
+    <figcaption>width={64, 256} × freq={0, 10}</figcaption>
+  </figure>
+</section>
+
+<section id="part2">
+  <h2>Part 2 — Full NeRF</h2>
+
+  <p>
+    For Part 2 I implemented the full NeRF pipeline. 
+    I started by generating rays for every pixel using the intrinsic matrix and the camera-to-world transformations. 
+    This required converting points from camera space to world space, mapping pixel coordinates back to camera space with an inverse projection, and computing normalized ray directions. 
+    Using these pieces I sampled points along each ray between near and far bounds, with random perturbations during training so the rays covered more of the scene.
+  </p>
+
+  <p>
+    The NeRF network takes 3D sample points and view directions as input. 
+    Both are positional encoded before being passed into a deeper MLP with a skip connection. 
+    The model outputs a density value and an RGB color for each sample. 
+    The volume rendering equation converts these predictions into a single pixel color for each ray. 
+    I trained the network by comparing these rendered colors to the ground truth images using Adam with a learning rate of 5e-4. 
+    I also logged PSNR on the validation set and saved intermediate renders.
+  </p>
+
+  <p>
+    Once training reached a good PSNR score, I rendered novel views using the provided test camera poses from the Lego dataset. This produced the spherical video shown below.
+  </p>
+
+  <h3>Implementation Summary for Parts 2.1–2.5</h3>
+
+  <h4>Part 2.1 — Creating Rays from Cameras</h4>
+  <p>
+    I implemented a camera-to-world transformation that converts 3D camera coordinates into world coordinates by using homogeneous vectors and matrix multiplication. For pixel-to-camera conversion, I inverted the intrinsic matrix and multiplied it by the pixel’s homogeneous coordinates scaled by depth. A ray is created by mapping a pixel to a world-space point at depth 1, subtracting the camera origin from that point, and normalizing the result to form a direction vector. All of these functions support batched coordinates.
+  </p>
+
+  <h4>Part 2.2 — Sampling</h4>
+  <p>
+    I constructed a grid of pixel centers for every training image and randomly sampled indices each iteration. Each sampled pixel was converted into a ray using the functions in 2.1. For sampling points along rays, I generated 32–64 uniform t-values between near and far bounds and added per-interval perturbation during training so the samples shift randomly and cover more of the volume. The 3D sample points are computed as ray_o + t * ray_d.
+  </p>
+
+  <h4>Part 2.3 — Dataloader (RaysData)</h4>
+  <p>
+    I wrote a dataloader that precomputes all rays for all training images. It stores flattened UV coordinates, pixel colors, and the corresponding ray origins and directions. The <code>sample_rays</code> method returns a batch of rays and colors for training. I used the Viser visualizer to verify that rays are oriented correctly, lie inside the frustum, and index into the images in the proper xy ordering.
+  </p>
+
+  <h4>Part 2.4 — Neural Radiance Field Network</h4>
+  <p>
+    The NeRF model encodes 3D sample points (L=10) and view directions (L=4) with positional encoding. The architecture consists of a deep MLP with ReLU activations and a skip connection that concatenates the encoded inputs into the middle of the network. The density branch outputs positive densities using softplus, while the color branch conditions on view direction and uses a sigmoid to keep RGB values in the valid range.
+  </p>
+
+  <h4>Part 2.5 — Volume Rendering</h4>
+  <p>
+    I implemented the discrete volume rendering function in torch so gradients propagate through the density and color predictions. I computed alpha = 1 − exp(−σΔt), accumulated transmittance using the cumulative product of survival probabilities, and weighted each sample’s color accordingly. The function matches the provided correctness test within the given tolerance.
+  </p>
+
+  <h3>Camera Frustums and Rays (Viser)</h3>
+  <div class="gallery">
+    <figure><img src="media/pt2viser.png"></figure>
+    <figure><img src="media/pt2viser2.png"></figure>
+  </div>
+
+  <h2>Lego NeRF</h2>
+
+  <h3>Training Progression</h3>
+  <div class="gallery">
+    <figure><img src="media/progress_1.png"></figure>
+    <figure><img src="media/progress_300.png"></figure>
+    <figure><img src="media/progress_600.png"></figure>
+    <figure><img src="media/progress_900.png"></figure>
+    <figure><img src="media/progress_1200.png"></figure>
+    <figure><img src="media/progress_1500.png"></figure>
+  </div>
+
+  <h3>Validation PSNR Curve</h3>
+  <figure>
+    <img src="media/val_curve.png">
+  </figure>
+
+  <h3>Spherical Novel View Render</h3>
+  <figure>
+    <img src="media/lego_spherical.gif">
+  </figure>
+
+  <h2>My Dataset — Coke Can</h2>
+
+
+  <p>
+    Here, I trained a NeRF on my own Coke can dataset from Part 0. 
+    I used the dataset created in the part 0 task that mimics the Lego example. 
+    Because the object was close to the camera I changed the near and far bounds to 0.02 and 0.5 (similar to staff's lafufu example) so the sampled points stayed inside the real scene. 
+    I started with 32 samples because of compute restraints then changed to 64 when I changed Colab runtime.
+  </p>
+
+  <p>
+    I didn't make too many hyperparamter changes, because the same 10k batch size and 64 samples worked well. However, 
+    I did increase the number of iterations from 1500 to 2000 because I saw there was still some room to go with psnr.
+  </p>
+  <p>
+    I saved intermediate renders and the full training loss curve. 
+    Generating a proper circular camera path was the most difficult part and I had to experiement with different elevations and a "zoom". I show a couple of results below.
+  </p>
+
+  <h3>Training Progression</h3>
+  <figure>
+    <img src="media/cokeprog.png">
+  </figure>
+
+  <h3>Training Loss Curve</h3>
+  <figure>
+    <img src="media/coke_training_loss.png">
+  </figure>
+
+  <h3>Validation PSNR Curve</h3>
+  <figure>
+    <img src="media/validation_psnr_coke.png">
+  </figure>
+
+  <h3>Novel Views</h3>
+  <div class="gallery">
+    <figure><img src="media/loop.gif"></figure>
+  </div>
+
+  <div class="gallery">
+    <figure><img src="media/loop2.gif"></figure>
+  </div>
+
+</section>
+
+</main>
+</body>
+</html>
