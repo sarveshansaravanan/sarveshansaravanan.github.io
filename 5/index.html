@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project 5 — Diffusion Models</title>
+  <link rel="stylesheet" href="../style.css"/>
+  <style>
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      justify-items: center;
+    }
+    .gallery-large {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 30px;
+      justify-items: center;
+    }
+    .row-images {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin: 30px 0;
+      flex-wrap: wrap;
+    }
+    .row-images figure {
+      flex: 0 1 auto;
+    }
+    figure img { max-width: 100%; border-radius: 6px; }
+    pre { background: #1e1e1e; padding: 12px; border-radius: 6px; }
+    figcaption { color: #bbb; }
+  </style>
+</head>
+
+<body>
+<header>
+  <a href="../index.html">← Back to Portfolio</a>
+  <h1>Project 5 — Fun with Diffusion Models</h1>
+</header>
+
+<main>
+
+<section>
+  <h2>Part 0 — Setup and Text Prompts</h2>
+  <p>
+    This project uses the DeepFloyd IF diffusion model by Stability AI. 
+    I generated custom prompt embeddings using 180's  embedding clusters and experimented with various prompts. 
+    All experiments use the same random seed (4141411018) for reproducibility. The prompts are the following:
+    'a high quality picture',
+ 'an oil painting of a snowy mountain village',
+ 'a photo of a man',
+ 'a photo of a dog wearing sunglasses',
+ 'an oil painting of people around a campfire',
+ 'a lithograph of waterfalls',
+ 'a lithograph of a skull',
+ 'a man wearing a hat',
+ 'a rocket ship',
+ 'a pencil',
+ 'a high quality photo',
+ 'an alien in the jungle',
+ 'a train driving through space',
+ 'a penguin made of play doh',
+ 'a basketball court on the Moon',
+ 'a football game played in an underwater city',
+ 'a butterfly upright and human face upside down',
+ 'a tree upright but mountain range upside down',
+ "a landscape from farther away and cat's face when zoomed in",
+ 'a garden of flowers from far away but ghost up close',
+'a butterfly',
+ 'a human face',
+ 'a tree upright',
+ 'a mountain range',
+ 'a garden of flowers',
+ 'a ghost',
+ ''.
+  </p>
+
+  <h3>Sample Outputs with Different Inference Steps</h3>
+  <div class="gallery">
+    <figure><img src="media/1_0_3imagesinference20.png"><figcaption>Inference Steps: 20</figcaption></figure>
+    <figure><img src="media/1_0_3imagesinference500.png"><figcaption>Inference Steps: 500</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Part 1.1 — Implementing the Forward Process</h2>
+  <p>
+    The forward process adds noise to a clean image according to the diffusion schedule. I implemented the formula 
+    x_t = √(ᾱ_t) * x_0 + √(1 - ᾱ_t) * ε, where ε is Gaussian noise. As timestep t increases, the image becomes 
+    progressively noisier until it's essentially pure noise.
+  </p>
+
+  <h3>Noisy Campanile at Different Timesteps</h3>
+  <div class="gallery-large">
+    <figure><img src="media/download_resized.png"><figcaption>Original Campanile image</figcaption></figure>
+     </div>
+  <div class="gallery-large">
+    <figure><img src="media/1_1_250_resized.png"><figcaption>t = 250</figcaption></figure>
+    <figure><img src="media/1_1_500_resized.png"><figcaption>t = 500</figcaption></figure>
+    <figure><img src="media/1_1_750_resized.png"><figcaption>t = 750</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Part 1.2 — Classical Denoising</h2>
+  <p>
+    I attempted to denoise the noisy images using Gaussian blur filtering. As expected, classical denoising methods 
+    struggle significantly with high noise levels. The results are poor, especially for t=500 and t=750, demonstrating 
+    the need for learned denoising approaches.
+  </p>
+
+  <h3>Gaussian Blur Denoising Results</h3>
+  <div class="gallery-large">
+    <figure><img src="media/12_250_resized.png"><figcaption>Gaussian Blur at t = 250</figcaption></figure>
+    <figure><img src="media/12_500_resized.png"><figcaption>Gaussian Blur at t = 500</figcaption></figure>
+    <figure><img src="media/1_2_750_resized.png"><figcaption>Gaussian Blur at t = 750</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Part 1.3 — One-Step Denoising</h2>
+  <p>
+    Using the pretrained DeepFloyd UNet, I performed one-step denoising by estimating the noise in the image and 
+    removing it to recover an estimate of the original. The UNet is conditioned on both the timestep and a text prompt 
+    embedding. The results are significantly better than Gaussian blur, though still imperfect for high noise levels.
+  </p>
+
+  <h3>One-Step Denoising Results</h3>
+  <div class="gallery-large">
+    <figure><img src="media/1_3_250_resized.png"><figcaption>One-Step Denoised at t = 250</figcaption></figure>
+    <figure><img src="media/1_3_500_resized.png"><figcaption>One-Step Denoised at t = 500</figcaption></figure>
+    <figure><img src="media/1_3_750_resized.png"><figcaption>One-Step Denoised at t = 750</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Part 1.4 — Iterative Denoising</h2>
+  <p>
+    I implemented the full iterative denoising loop using strided timesteps (starting at 990, stride of 30). 
+    Rather than denoising in one step, the algorithm gradually removes noise over multiple iterations. 
+    This produces significantly better results than one-step denoising, as the model can progressively refine 
+    its estimate of the clean image. Included is a comparison between iterative denoising, one-step denoising, 
+    and Gaussian blur.
+  </p>
+
+  <h3>Iterative Denoising Progression</h3>
+  <div class="gallery">
+    <figure><img src="media/1_4_30_90_resized.png"><figcaption>t = 90</figcaption></figure>
+    <figure><img src="media/1_4_25_240_resized.png"><figcaption>t = 240</figcaption></figure>
+    <figure><img src="media/1_4_20_390_resized.png"><figcaption>t = 390</figcaption></figure>
+    <figure><img src="media/1_4_15_540_resized.png"><figcaption>t = 540</figcaption></figure>
+    <figure><img src="media/1_4_10_690_resized.png"><figcaption>t = 690</figcaption></figure>
+  </div>
+
+  <h3>Comparison: Iterative vs One-Step vs Gaussian</h3>
+  <div class="gallery">
+    <figure><img src="media/1_4_final_resized.png"><figcaption>Iteratively Denoised</figcaption></figure>
+    <figure><img src="media/1_4_onestep_resized.png"><figcaption>One-Step Denoised</figcaption></figure>
+    <figure><img src="media/1_4_gaussian_resized.png"><figcaption>Gaussian Blur</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Part 1.5 — Diffusion Model Sampling</h2>
+  <p>
+    By starting with pure random noise and running the iterative denoising process, the diffusion model can 
+    generate images from scratch. I sampled 5 images using the prompt "a high quality photo". The results seem like they 
+    kinda make sense, though quality is limited without classifier-free guidance.
+  </p>
+
+  <h3>Generated Samples</h3>
+  <div class="gallery">
+    <figure><img src="media/1_5_0_resized.png"><figcaption>Sample 1</figcaption></figure>
+    <figure><img src="media/1_5_1_resized.png"><figcaption>Sample 2</figcaption></figure>
+    <figure><img src="media/1_5_2_resized.png"><figcaption>Sample 3</figcaption></figure>
+    <figure><img src="media/1_5_3_resized.png"><figcaption>Sample 4</figcaption></figure>
+    <figure><img src="media/1_5_4_resized.png"><figcaption>Sample 5</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Part 1.6 — Classifier-Free Guidance (CFG)</h2>
+  <p>
+    Classifier-Free Guidance improves image quality a bunch by combining conditional and unconditional noise 
+    estimates. The formula ε = ε_u + γ(ε_c - ε_u) allows us to pull the result towards our prompt while still staying
+    grounded in realistic images. I used a default CFG scale of γ = 7, which gave me pretty good.
+  </p>
+
+  <h3>Samples with CFG (γ = 7)</h3>
+  <div class="gallery">
+    <figure><img src="media/1_6_0_resized.png"><figcaption>Sample 1</figcaption></figure>
+    <figure><img src="media/1_6_1_resized.png"><figcaption>Sample 2</figcaption></figure>
+    <figure><img src="media/1_6_2_resized.png"><figcaption>Sample 3</figcaption></figure>
+    <figure><img src="media/1_6_3_resized.png"><figcaption>Sample 4</figcaption></figure>
+    <figure><img src="media/1_6_4_resized.png"><figcaption>Sample 5</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Part 1.7 — Image-to-Image Translation</h2>
+  <p>
+    Following the SDEdit algorithm, I took real images, added varying amounts of noise, and denoised them back 
+    to the natural image manifold. The i_start parameter indexes into the strided timestep list (990, 960, 930...0). Lower i_start values correspond to higher timesteps and more noise, making the model stray further. Higher i_start values correspond to lower timesteps and less noise, keeping outputs closer to the original.
+    We still use the same prompt: "a high quality photo".
+  </p>
+
+  <h3>SDEdit on Campanile</h3>
+  <div class="gallery">
+    <figure><img src="media/1_7.png"><figcaption>Original Campanile</figcaption></figure>
+  </div>
+
+  <h3>SDEdit on Test Images</h3>
+  
+  <div class="row-images">
+    <figure><img src="media/lincoln.png"><figcaption>Original Lincoln</figcaption></figure>
+    <figure><img src="media/1_7_lincoln.png"><figcaption>Edited Lincoln</figcaption></figure>
+  </div>
+
+  <div class="row-images">
+    <figure><img src="media/quokka.png"><figcaption>Original Quokka</figcaption></figure>
+    <figure><img src="media/1_7quokka.png"><figcaption>Edited Quokka</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Part 1.7.1 — Editing Hand-Drawn and Web Images</h2>
+  <p>
+   From CS180 website: "This procedure works particularly well if we start with a nonrealistic image (e.g. painting, a sketch, some scribbles) and project it onto the natural image manifold."
+   So I tried this out on a web image and two hand-drawn sketches, varying the i_start parameter to see how it affects the output.
+  </p>
+
+  <h3>Web Image Edits</h3>
+  <div class="gallery-large">
+    <figure><img src="media/shai.jpeg"><figcaption>original</figcaption></figure>
+    <figure><img src="media/1_71_1_resized.png"><figcaption>i_start = 1</figcaption></figure>
+    <figure><img src="media/1_71_3_resized.png"><figcaption>i_start = 3</figcaption></figure>
+    <figure><img src="media/1_71_5_resized.png"><figcaption>i_start = 5</figcaption></figure>
+    <figure><img src="media/1_71_7_resized.png"><figcaption>i_start = 7</figcaption></figure>
+    <figure><img src="media/1_71_10_resized.png"><figcaption>i_start = 10</figcaption></figure>
+    <figure><img src="media/1_71_20_resized.png"><figcaption>i_start = 20</figcaption></figure>
+    <figure><img src="media/1_71_25_resized.png"><figcaption>i_start = 25</figcaption></figure>
+    <figure><img src="media/1_71_32_resized.png"><figcaption>i_start = 32</figcaption></figure>
+  </div>
+
+  <h3>Hand-Drawn Image 1 Edits</h3>
+  <div class="gallery-large">
+    <figure><img src="media/1_71_handdrawn1_resized.png"><figcaption>Original Sketch</figcaption></figure>
+    <figure><img src="media/1_71_1_1_resized.png"><figcaption>i_start = 1</figcaption></figure>
+    <figure><img src="media/1_71_1_3_resized.png"><figcaption>i_start = 3</figcaption></figure>
+    <figure><img src="media/1_71_1_5_resized.png"><figcaption>i_start = 5</figcaption></figure>
+    <figure><img src="media/1_71_1_7_resized.png"><figcaption>i_start = 7</figcaption></figure>
+    <figure><img src="media/1_71_1_10_resized.png"><figcaption>i_start = 10</figcaption></figure>
+    <figure><img src="media/1_71_1_20_resized.png"><figcaption>i_start = 20</figcaption></figure>
+    <figure><img src="media/1_71_1_25_resized.png"><figcaption>i_start = 25</figcaption></figure>
+    <figure><img src="media/1_71_1_32_resized.png"><figcaption>i_start = 32</figcaption></figure>
+  </div>
+
+  <h3>Hand-Drawn Image 2 Edits</h3>
+  <div class="gallery-large">
+    <figure><img src="media/1_71_handdrawn2_resized.png"><figcaption>Original Sketch</figcaption></figure>
+    <figure><img src="media/1_71_2_1_resized.png"><figcaption>i_start = 1</figcaption></figure>
+    <figure><img src="media/1_71_2_3_resized.png"><figcaption>i_start = 3</figcaption></figure>
+    <figure><img src="media/1_71_2_5_resized.png"><figcaption>i_start = 5</figcaption></figure>
+    <figure><img src="media/1_71_2_7_resized.png"><figcaption>i_start = 7</figcaption></figure>
+    <figure><img src="media/1_71_2_10_resized.png"><figcaption>i_start = 10</figcaption></figure>
+    <figure><img src="media/1_71_2_20_resized.png"><figcaption>i_start = 20</figcaption></figure>
+    <figure><img src="media/1_71_2_25_resized.png"><figcaption>i_start = 25</figcaption></figure>
+    <figure><img src="media/1_71_2_32_resized.png"><figcaption>i_start = 32</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Part 1.7.2 — Inpainting</h2>
+  <p>
+    Following the RePaint algorithm, I implemented inpainting by running the diffusion denoising loop while 
+    forcing pixels outside the mask to match the original image (with appropriate noise added). This allows 
+    the model to fill in masked regions with content that seamlessly blends with the surrounding image.
+  </p>
+
+  <h3>Campanile Inpainting</h3>
+  <div class="gallery-large">
+    <figure><img src="media/1_72_campanileog_resized.png"><figcaption>Original</figcaption></figure>
+    <figure><img src="media/1_72_campanilemask_resized.png"><figcaption>Mask</figcaption></figure>
+    <figure><img src="media/1_7_campanilereplace_resized.png"><figcaption>Region to Fill</figcaption></figure>
+    <figure><img src="media/1_72_campanile_resized.png"><figcaption>Inpainted Result</figcaption></figure>
+  </div>
+
+  <h3>Lincoln Inpainting</h3>
+  <div class="gallery-large">
+    <figure><img src="media/1_72_lincolnog_resized.png"><figcaption>Original</figcaption></figure>
+    <figure><img src="media/1_72_lincolnmask_resized.png"><figcaption>Mask</figcaption></figure>
+    <figure><img src="media/1_72_lincolnreplace_resized.png"><figcaption>Region to Fill</figcaption></figure>
+    <figure><img src="media/1_72_lincoln_resized.png"><figcaption>Inpainted Result</figcaption></figure>
+  </div>
+
+  <h3>Quokka Inpainting</h3>
+  <div class="gallery-large">
+    <figure><img src="media/1_72_quokkaog_resized.png"><figcaption>Original</figcaption></figure>
+    <figure><img src="media/1_72_quokkamask_resized.png"><figcaption>Mask</figcaption></figure>
+    <figure><img src="media/1_72_quokkareplace_resized.png"><figcaption>Region to Fill</figcaption></figure>
+    <figure><img src="media/1_72_quokka_resized.png"><figcaption>Inpainted Result</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Part 1.7.3 — Text-Conditional Image-to-Image Translation</h2>
+  <p>
+    By using custom text prompts instead of "a high quality photo", I can guide the image-to-image translation 
+    process. This combines the projection onto the natural image manifold with semantic control from language, 
+    allowing us to visualize the transformations of the input images as it moves to the target.
+  </p>
+
+  <h3>Text-Guided Transformations</h3>
+  <div class="gallery-large">
+    <figure><img src="media/1_73_waterfalltocampanile.png"><figcaption>Waterfall → Campanile</figcaption></figure>
+   </div>
+    <figure><img src="media/1_73_skulltolincoln.png"><figcaption>Skull → Lincoln</figcaption></figure>
+    <figure><img src="media/1_73_penciltoquokka.png"><figcaption>Pencil → Quokka</figcaption></figure>
+  
+</section>
+
+<section>
+  <h2>Part 1.8 — Visual Anagrams</h2>
+  <p>
+    I implemented visual anagrams by averaging noise estimates from two different prompts, one for the normal 
+    orientation and one for the flipped image. The result is an optical illusion that looks different  
+    depending on the way you look at it. The algorithm computes ε_1 for the upright image, ε_2 for the flipped image, 
+    flips ε_2 back, and averages them.
+  </p>
+
+  <h3>Visual Anagram Examples</h3>
+  <div class="gallery-large">
+    <figure><img src="media/1_8mansnowvillage_resized.png"><figcaption>Man / Snow Village</figcaption></figure>
+    <figure><img src="media/1_8butterflyface_resized.png"><figcaption>Butterfly / Face</figcaption></figure>
+    <figure><img src="media/1_8treemountainrange_resized.png"><figcaption>Tree / Mountain Range</figcaption></figure>
+    <figure><img src="media/1_8treemt2_resized.png"><figcaption>Tree / Mountain attempt 2</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Part 1.9 — Hybrid Images</h2>
+  <p>
+    In a similar method of combining prompts, we follow Factorized Diffusion: I created hybrid images by combining low-frequency components from one 
+    noise estimate with high-frequency components from another. I had to experiment around with kernel size (default was 33) and also the scale parameter. 
+    The formula is ε = f_lowpass(ε_1) + f_highpass(ε_2).
+  </p>
+
+  <h3>Hybrid Image Examples</h3>
+  <div class="gallery-large">
+    <figure><img src="media/1_9_skullwaterfall_resized.png"><figcaption>Skull / Waterfall Hybrid</figcaption></figure>
+    <figure><img src="media/1_9ghostbutterfly_resized.png"><figcaption>Ghost / Butterfly Hybrid</figcaption></figure>
+    <figure><img src="media/1_9rocketshiptree_resized.png"><figcaption>Rocket Ship / Tree Hybrid</figcaption></figure>
+    <figure><img src="media/1_9rocketry_resized.png"><figcaption>Rocket / Tree attempt 2</figcaption></figure>
+  </div>
+</section>
+
+</main>
+</body>
+</html>
