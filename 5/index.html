@@ -355,6 +355,188 @@
     <figure><img src="media/1_9rocketry_resized.png"><figcaption>Rocket / Tree attempt 2</figcaption></figure>
   </div>
 </section>
+<section>
+  <h1>Part B — Flow Matching from Scratch</h1>
+  <p>
+    We implement Flow Matching on MNIST.
+  </p>
+</section>
+
+<!-- ========================================================= -->
+<!-- ======================== 1.2 ============================ -->
+<!-- ========================================================= -->
+
+<section>
+  <h2>1.2 — Noising Process Visualization</h2>
+  <p>
+    Given some noisy image we optimize a denoiser using L2 loss. MNIST digits were corrupted using the formula 
+    x_t = sqrt(1 - σ^2) x + σ ε where epsilon ~ N(0, 1). As σ increases, 
+    digits become progressively more dominated by noise.
+  </p>
+
+  <div class="gallery-large">
+    <figure><img src="media2/1_2_0.png"><figcaption>Noising visualization</figcaption></figure>
+  </div>
+</section>
+
+<!-- ========================================================= -->
+<!-- ===================== 1.2.1 TRAINING ==================== -->
+<!-- ========================================================= -->
+
+<section>
+  <h2>1.2.1 — Training a Single-Step Denoiser</h2>
+  <p>
+    I trained a UNet (hidden dimension 128) for 5 epochs with Adam (1e-4) and batch size 256.
+    For each batch, σ=0.5 noise was sampled from the gaussian to corrupt the digts.
+  </p>
+
+  <h3>Training Loss Curve</h3>
+  <div class="gallery-large">
+    <figure><img src="media2/1_2_1_loss.png"><figcaption>Training Loss (Single-step Denoiser)</figcaption></figure>
+  </div>
+
+  <h3>Denoising Results</h3>
+  <div class="gallery">
+    <figure><img src="media2/1_2_1_epoch1.png"><figcaption>Epoch 1</figcaption></figure>
+    <figure><img src="media2/1_2_1_epoch5.png"><figcaption>Epoch 5</figcaption></figure>
+  </div>
+</section>
+
+<!-- ========================================================= -->
+<!-- ================== 1.2.2 OUT OF DIST ==================== -->
+<!-- ========================================================= -->
+
+<section>
+  <h2>1.2.2 — Out-of-Distribution Noise Testing</h2>
+  <p>
+    The denoiser was trained only on σ=0.5, so we wanted to test out of dist noise levels.
+    We clearly don't do very well at the higher noise levels.
+  </p>
+
+    <figure><img src="media2/1_2_2_1.png"><figcaption>σ sample 1</figcaption></figure>
+    <figure><img src="media2/1_2_2_2.png"><figcaption>σ sample 2</figcaption></figure>
+    <figure><img src="media2/1_2_2_3.png"><figcaption>σ sample 3</figcaption></figure>
+    <figure><img src="media2/1_2_2_4.png"><figcaption>σ sample 4</figcaption></figure>
+</section>
+
+<!-- ========================================================= -->
+<!-- ======================== 1.2.3 =========================== -->
+<!-- ========================================================= -->
+
+<section>
+  <h2>1.2.3 — Denoising Pure Noise</h2>
+  <p>
+    The next part is starting from pure Gaussian noise, going from ε to the clean image
+  </p>
+
+  <h3>Training Loss</h3>
+  <div class="gallery-large">
+    <figure><img src="media2/1_2_3_loss.png"><figcaption>Pure Noise loss</figcaption></figure>
+  </div>
+
+  <h3>Generated Samples</h3>
+  <div class="gallery">
+    <figure><img src="media2/1_2_3_epoch1.png"><figcaption>Epoch 1</figcaption></figure>
+    <figure><img src="media2/1_2_3_epoch5.png"><figcaption>Epoch 5</figcaption></figure>
+  </div>
+
+  <p>
+    <strong>Explanation:</strong>
+    This pattern we see of just blurriness comes from the fact that we're using MSE loss. The model gets an input of just noise but digits are distinct things. Therefore when using mse loss, 
+    it pushes the denoising process to minimize the avg error across all digits resulting in just blurry mess. This is similar to something we saw in lecture where
+    using mse loss in colorization tasks resulted in a washed out look. 
+  </p>
+</section>
+
+<!-- ========================================================= -->
+<!-- ========================= 2.2 =========================== -->
+<!-- ========================================================= -->
+
+<section>
+  <h2>2.2 — Training the Time-Conditioned Flow UNet</h2>
+  <p>
+    I implemented a time-conditioned UNet (hidden dimension 64) using FCBlocks to inject normalized t
+    into the unflatten and first upsampling blocks.
+  </p>
+
+  <h3>Training Loss</h3>
+  <div class="gallery-large">
+    <figure><img src="media2/2_2_loss.png"><figcaption>Time-Conditioned UNet Training Loss</figcaption></figure>
+  </div>
+</section>
+
+<!-- ========================================================= -->
+<!-- ========================= 2.3 =========================== -->
+<!-- ========================================================= -->
+
+<section>
+  <h2>2.3 — Sampling from the Time-Conditioned UNet</h2>
+  <p>
+    Here is samples from epocs 1, 5, and 10.
+  </p>
+
+    <figure><img src="media2/2_3_epoch1.png"><figcaption>Epoch 1</figcaption></figure>
+    <figure><img src="media2/2_3_epoch_5.png"><figcaption>Epoch 5</figcaption></figure>
+    <figure><img src="media2/2_3_10.png"><figcaption>Epoch 10</figcaption></figure>
+</section>
+
+<!-- ========================================================= -->
+<!-- ========================= 2.5 =========================== -->
+<!-- ========================================================= -->
+
+<section>
+  <h2>2.5 — Training the Class-Conditioned UNet</h2>
+  <p>
+    We build on the time-conditioned UNet by adding specific class conditioning so that we can actually generate the digits rather
+    than what we saw above.
+  </p>
+
+  <h3>Training Loss</h3>
+  <div class="gallery-large">
+    <figure><img src="media2/2_5_loss.png"><figcaption>Class-Conditioned UNet Training Loss</figcaption></figure>
+  </div>
+</section>
+
+<!-- ========================================================= -->
+<!-- ========================= 2.6 =========================== -->
+<!-- ========================================================= -->
+
+<section>
+  <h2>2.6 — Sampling from the Class-Conditioned UNet</h2>
+  <p>
+    Samples from e: 1, 5, and 10. This is using an exponential LR scheduler starting at 7e-4.
+  </p>
+
+  <h3>Samples (With LR Scheduler)</h3>
+  <div class="gallery">
+    <figure><img src="media2/2_6_epoch1Sched.png"><figcaption>Epoch 1</figcaption></figure>
+    <figure><img src="media2/2_6_epoch5Sched.png"><figcaption>Epoch 5</figcaption></figure>
+    </div><figure><img src="media2/2_6_epoch10Sched.png"><figcaption>Epoch 10</figcaption></figure>
+  
+
+  <h3>Removing the Learning-Rate Scheduler</h3>
+  <p>
+    To remove the exponential LR scheduler while keeping similar performance, I lowered the initial learning rate from 7e-4 to 3e-4. Though this is lower, I figured this is around what the LR moves to anyway.
+I also increased the number of epochs to 15 just in case. The loss curve does seem pretty similar with a tiny tiny bit more jaggedness.
+    We seem to achieve pretty similar results. 
+  </p>
+
+  <h3>Samples (No Scheduler)</h3>
+  <div class="gallery">
+    <figure><img src="media2/2_6_epoch1_noSched.png"><figcaption>Epoch 1 (No Sched)</figcaption></figure>
+    <figure><img src="media2/2_6_epoch5_noSched.png"><figcaption>Epoch 5 (No Sched)</figcaption></figure>
+    </div>
+    <div class="gallery">
+          <figure><img src="media2/2_6_epoch10_noSched.png"><figcaption>Epoch 10 (No Sched)</figcaption></figure>
+          <figure><img src="media2/2_6_epoch15_noSched.png"><figcaption>Epoch 15 (No Sched)</figcaption></figure> 
+    </div>
+  
+
+  <h3>Loss Curve (No Scheduler)</h3>
+  <div class="gallery-large">
+    <figure><img src="media2/2_6_loss_noSched.png"><figcaption>Training Loss Without Scheduler</figcaption></figure>
+  </div>
+</section>
 
 </main>
 </body>
