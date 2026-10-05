@@ -3,38 +3,133 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Portfolio</title>
+  <meta name="description" content="Sarveshan Saravanan is an EECS student at UC Berkeley working across software engineering, machine learning, robotics, and teaching.">
+  <title>Sarveshan Saravanan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <header>
-    <h1>Sarveshan Saravanan</h1>
-    <p>CS180 • Fall 2025</p>
-  </header>
+<body class="site-page">
+  <div class="page-shell">
+    <nav class="site-nav" aria-label="Primary navigation">
+      <div class="nav-links">
+        <a class="active" href="index.html">About</a>
+        <a href="teaching/index.html">Teaching</a>
+        <a href="portfolio/index.html">Portfolio</a>
+      </div>
+    </nav>
 
-  <main>
-    <h2>Course Portfolio</h2>
-    <div class="grid">
-      <a href="0/index.html" class="card">
-        <h3>Project 0: Becoming Friends with Your Camera</h3>
-      </a>
-      <a href="1/index.html" class="card">
-        <h3>Project 1: Images of the Russian Empire:
-          Colorizing the Prokudin-Gorskii photo collection</h3>
-      </a>
-      <a href="2/index.html" class="card">
-        <h3>Project 2: Fun with Filters and Frequencies</h3>
-      </a>
-      <a href="3/index.html" class="card">
-        <h3>Project 3: Image Warping and Mosaicing</h3>
-      </a>
-      <a href="4/index.html" class="card">
-        <h3>Project 4: NeRF</h3>
-      </a>
-      <a href="5/index.html" class="card">
-        <h3>Project 5: Fun with Diffusion Models</h3>
-      </a>
-    </div>
-  </main>
+    <main>
+      <section class="intro" aria-labelledby="intro-title">
+        <p class="eyebrow">Berkeley, California</p>
+        <h1 id="intro-title">Sarveshan Saravanan</h1>
+        <p class="intro-copy">I&rsquo;m an Electrical Engineering &amp; Computer Science student at UC Berkeley interested in distributed systems, machine learning, robotics, and education. I&rsquo;ve worked on production infrastructure at Databricks, natural-language tooling at Amazon Prime Video, robot perception at Bright Machines, and autonomous racing research at Berkeley.</p>
+        <div class="contact-row" aria-label="Contact links">
+          <a href="mailto:sarveshan@berkeley.edu">Email</a>
+          <a href="https://www.linkedin.com/in/sarveshan/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a href="https://github.com/sarveshansaravanan" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+      </section>
+
+      <section class="pathways" aria-label="Featured sections">
+        <a class="pathway pathway-teaching" href="teaching/index.html">
+          <span class="pathway-number">01</span>
+          <div>
+            <h2>Teaching</h2>
+            <p>CS61B discussion and lab materials, organized by semester.</p>
+          </div>
+          <span class="pathway-arrow" aria-hidden="true">↗</span>
+        </a>
+        <a class="pathway pathway-portfolio" href="portfolio/index.html">
+          <span class="pathway-number">02</span>
+          <div>
+            <p class="kicker">Selected coursework</p>
+            <h2>Portfolio</h2>
+            <p>Computer vision experiments, from camera geometry to diffusion models.</p>
+          </div>
+          <span class="pathway-arrow" aria-hidden="true">↗</span>
+        </a>
+      </section>
+
+      <section class="experience section-rule" aria-labelledby="experience-title">
+        <div class="section-heading">
+          <p class="kicker">Where I&rsquo;ve worked</p>
+          <h2 id="experience-title">Experience</h2>
+        </div>
+
+        <div class="timeline">
+          <article class="experience-row">
+            <div class="company-block"><img class="company-logo" src="https://cdn.simpleicons.org/databricks/FF3621" alt="Databricks logo"><span>Databricks</span></div>
+            <div class="experience-body">
+              <div class="experience-title"><h3>Software Engineering Intern</h3><time>May &ndash; Aug 2026</time></div>
+              <p>Built distributed rate limiting for log delivery, a custom Rust transform for Vector, and self-service tooling for production teams.</p>
+              <ul class="tag-list" aria-label="Technologies"><li>Distributed systems</li><li>Rust</li><li>Kubernetes</li></ul>
+            </div>
+          </article>
+
+          <article class="experience-row">
+            <div class="company-block"><img class="company-logo" src="assets/berkeley-eecs.png" alt="UC Berkeley EECS logo"><span>UC Berkeley EECS</span></div>
+            <div class="experience-body">
+              <div class="experience-title"><h3>Teaching Assistant, CS61B</h3><time>Present</time></div>
+              <p>Teach weekly sections and help lead course infrastructure supporting more than 1,000 students each semester.</p>
+              <ul class="tag-list" aria-label="Focus areas"><li>Data structures</li><li>Course infrastructure</li><li>Teaching</li></ul>
+            </div>
+          </article>
+
+          <article class="experience-row">
+            <div class="company-block"><img class="company-logo company-logo-wide" src="assets/ai-racing-tech.png" alt="AI Racing Tech logo and race car"><span>Berkeley AI Racing Tech</span></div>
+            <div class="experience-body">
+              <div class="experience-title"><h3>Perception Researcher</h3><time>Jan 2025 &ndash; Present</time></div>
+              <p>Developing LiDAR and vision perception for an autonomous race car designed to operate at more than 160 mph.</p>
+              <ul class="tag-list" aria-label="Technologies"><li>Computer vision</li><li>TensorRT</li><li>ROS</li></ul>
+            </div>
+          </article>
+
+          <article class="experience-row">
+            <div class="company-block"><img class="company-logo" src="https://www.google.com/s2/favicons?domain=primevideo.com&amp;sz=128" alt="Prime Video logo"><span>Amazon &middot; Prime Video</span></div>
+            <div class="experience-body">
+              <div class="experience-title"><h3>Software Development Engineering Intern</h3><time>May &ndash; Aug 2025</time></div>
+              <p>Designed a natural-language search interface for content policy audits and provisioned the supporting serverless infrastructure.</p>
+              <ul class="tag-list" aria-label="Technologies"><li>NLP</li><li>AWS</li><li>Infrastructure as code</li></ul>
+            </div>
+          </article>
+
+          <article class="experience-row">
+            <div class="company-block"><img class="company-logo company-logo-wide" src="https://cdn.simpleicons.org/lenovo/E2231A" alt="Lenovo logo"><span>Lenovo</span></div>
+            <div class="experience-body">
+              <div class="experience-title"><h3>Technical Project Manager (Contract)</h3><time>Jan &ndash; May 2025</time></div>
+              <p>Created an AI-powered lecture companion for transcription, summarization, and study guide generation.</p>
+              <ul class="tag-list" aria-label="Technologies"><li>Applied AI</li><li>Full stack</li><li>Product</li></ul>
+            </div>
+          </article>
+
+          <article class="experience-row">
+            <div class="company-block"><img class="company-logo" src="https://cdn.simpleicons.org/amd/000000" alt="AMD logo"><span>AMD</span></div>
+            <div class="experience-body">
+              <div class="experience-title"><h3>Software Engineer (Contract)</h3><time>Sep 2024 &ndash; Jan 2025</time></div>
+              <p>Delivered an internal legal-data dashboard and Azure Functions APIs for retrieving and comparing case materials.</p>
+              <ul class="tag-list" aria-label="Technologies"><li>Azure</li><li>APIs</li><li>Data systems</li></ul>
+            </div>
+          </article>
+
+          <article class="experience-row">
+            <div class="company-block"><img class="company-logo" src="https://www.google.com/s2/favicons?domain=brightmachines.com&amp;sz=128" alt="Bright Machines logo"><span>Bright Machines</span></div>
+            <div class="experience-body">
+              <div class="experience-title"><h3>Software Engineer Intern, Robot Perception</h3><time>May &ndash; Aug 2024</time></div>
+              <p>Built and optimized visual anomaly detection for motherboard assembly, including experiment management and automated tuning.</p>
+              <ul class="tag-list" aria-label="Technologies"><li>PyTorch</li><li>MLflow</li><li>MLOps</li></ul>
+            </div>
+          </article>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="site-footer">
+      <p>Designed and built by Sarveshan.</p>
+      <p>&copy; 2026 Sarveshan Saravanan</p>
+    </footer>
+  </div>
 </body>
 </html>
